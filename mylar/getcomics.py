@@ -695,6 +695,7 @@ class GC(object):
                     if not ltf:
                         if 'sh.st' not in lk['href']:
                             link_href = lk['href']
+                            logger.info(f"[DDL-DEBUG] Processing link: title='{lk.get('title', '?')}' href='{link_href[:100]}'")
                             # Resolve GetComics /dls/ interstitial links to the
                             # real file-host URL (follows the 302 and de-obfuscates
                             # the Location header).
