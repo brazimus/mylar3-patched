@@ -601,6 +601,14 @@ class GC(object):
         # Check for aio-pulse divs directly
         pulses = soup.findAll("div", {"class": "aio-pulse"})
         logger.info(f"[DDL-DEBUG] aio-pulse divs: {len(pulses)}")
+        # What IS in this soup?
+        title_tag = soup.find("title")
+        logger.info(f"[DDL-DEBUG] page title: {title_tag.text[:100] if title_tag else 'NO TITLE'}")
+        body_text = soup.get_text()[:300] if soup else "NO SOUP"
+        logger.info(f"[DDL-DEBUG] body preview: {body_text[:200]}")
+        # Check html length
+        html_len = len(str(soup)) if soup else 0
+        logger.info(f"[DDL-DEBUG] soup HTML length: {html_len}")
         while True:
             #logger.fdebug('count_bees: %s' % count_bees)
             try:
