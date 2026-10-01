@@ -589,6 +589,18 @@ class GC(object):
         beeswax = soup.findAll("p", {"style": "text-align: center;"})
         logger.info('[DDL-GATHERER-OF-LINKAGE] Now compiling release information & available links...')
         logger.info(f"[DDL-DEBUG] beeswax count: {len(beeswax)}")
+        # Debug: what does the soup actually contain?
+        all_p = soup.findAll("p")
+        logger.info(f"[DDL-DEBUG] total <p> tags: {len(all_p)}")
+        styles = set()
+        for p in all_p[:50]:
+            s = p.get('style', '')
+            if s:
+                styles.add(s[:60])
+        logger.info(f"[DDL-DEBUG] unique p styles (first 50): {list(styles)[:10]}")
+        # Check for aio-pulse divs directly
+        pulses = soup.findAll("div", {"class": "aio-pulse"})
+        logger.info(f"[DDL-DEBUG] aio-pulse divs: {len(pulses)}")
         while True:
             #logger.fdebug('count_bees: %s' % count_bees)
             try:
