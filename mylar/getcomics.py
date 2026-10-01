@@ -547,6 +547,36 @@ class GC(object):
             'mediafire': p + d3,
         }
         base_domain = site_domains.get(site_title.lower().strip())
+
+        # If FlareSolverr is enabled, use it to resolve the /dls/ URL since
+        # the endpoint is also Cloudflare-protected.
+        location = None
+        if mylar.CONFIG.ENABLE_FLARESOLVERR and mylar.CONFIG.FLARESOLVERR_URL:
+            try:
+                logger.fdebug('[DDL-DLS-RESOLVE] Using FlareSolverr to resolve /dls/ link')
+                flare_resp = self.session.post(
+                    mylar.CONFIG.FLARESOLVERR_URL,
+                    json={'cmd': 'request.get', 'url': dls_url, 'maxTimeout': 30000},
+                    verify=False,
+                    headers=self.flare_headers,
+                    timeout=60,
+                )
+                if flare_resp.status_code == 200:
+                    flare_json = flare_resp.json()
+                    if flare_json.get('status') == 'ok':
+                        solution = flare_json.get('solution', {})
+                        # FlareSolverr follows redirects; get the final URL
+                        final_url = solution.get('url', '')
+                        if final_url and final_url != dls_url and '/dls/' not in final_url:
+                            logger.info('[DDL-DLS-RESOLVE] FlareSolverr resolved to: %s' % final_url[:80])
+                            return final_url
+                        # Check response headers for Location
+                        # (FlareSolverr doesn't expose redirect headers directly,
+                        # so we fall through to direct method if URL didn't change)
+                        logger.fdebug('[DDL-DLS-RESOLVE] FlareSolverr did not redirect, trying direct')
+            except Exception as e:
+                logger.fdebug('[DDL-DLS-RESOLVE] FlareSolverr resolve failed: %s' % e)
+
         try:
             r = self.session.get(
                 dls_url, verify=True, headers=self.headers,
