@@ -309,20 +309,47 @@ class GC(object):
         logger.fdebug('now loading info from local html to resolve via url: %s' % link)
 
         self.cookie_receipt()
-        #logger.fdebug('session cookies: %s' % (self.session.cookies,))
-        t = self.session.get(
-            link,
-            verify=True,
-            headers=self.headers,
-            stream=True,
-           timeout=(30,30)
-        )
 
-        with open(title + '.html', 'wb') as f:
-            for chunk in t.iter_content(chunk_size=1024):
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-                    f.flush()
+        # If FlareSolverr is enabled, use it to fetch the page directly.
+        # The cf_clearance cookie alone is not sufficient - Cloudflare also
+        # validates TLS fingerprint which python-requests cannot spoof.
+        page_content = None
+        if mylar.CONFIG.ENABLE_FLARESOLVERR and mylar.CONFIG.FLARESOLVERR_URL:
+            try:
+                logger.fdebug('[DDL-FLARESOLVERR] Fetching page via FlareSolverr: %s' % link)
+                flare_resp = self.session.post(
+                    mylar.CONFIG.FLARESOLVERR_URL,
+                    json={'cmd': 'request.get', 'url': link, 'maxTimeout': 60000},
+                    verify=False,
+                    headers=self.flare_headers,
+                    timeout=90,
+                )
+                if flare_resp.status_code == 200:
+                    flare_json = flare_resp.json()
+                    if flare_json.get('status') == 'ok':
+                        page_content = flare_json['solution']['response']
+                        logger.fdebug('[DDL-FLARESOLVERR] Successfully retrieved page (%d bytes)' % len(page_content))
+            except Exception as e:
+                logger.warn('[DDL-FLARESOLVERR] Failed to fetch via FlareSolverr: %s - falling back to direct' % e)
+
+        if page_content is not None:
+            with open(title + '.html', 'w', encoding='utf-8') as f:
+                f.write(page_content)
+        else:
+            # Fallback to direct fetch
+            t = self.session.get(
+                link,
+                verify=True,
+                headers=self.headers,
+                stream=True,
+               timeout=(30,30)
+            )
+
+            with open(title + '.html', 'wb') as f:
+                for chunk in t.iter_content(chunk_size=1024):
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
+                        f.flush()
 
     def perform_search_queries(self, queryline):
         next_url = self.url
