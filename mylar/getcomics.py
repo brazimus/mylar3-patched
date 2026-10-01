@@ -750,6 +750,61 @@ class GC(object):
             count_bees +=1
 
         #logger.fdebug('final valid_links: %s' % (valid_links))
+
+        # Fallback: if beeswax parsing found no links, try direct aio-pulse extraction.
+        # Newer GetComics pages place download links in <section><div class="aio-button-center">
+        # <div class="aio-pulse"><a>...</a></div></div></section> instead of inside <p> tags.
+        has_links = any(
+            y.get('links') for y in valid_links.values() if isinstance(y, dict)
+        )
+        if not has_links:
+            logger.fdebug('[DDL-FALLBACK] No links via beeswax parsing, trying direct aio-pulse extraction')
+            fallback_links = []
+            # Try to get series/year/size from page metadata
+            fb_series = series
+            fb_year = year
+            fb_size = size
+            if not fb_series:
+                # Try to extract from page title or headings
+                try:
+                    h1 = soup.find('h1')
+                    if h1:
+                        fb_series = h1.text.strip()[:100]
+                except Exception:
+                    pass
+            for pulse in soup.findAll("div", {"class": "aio-pulse"}):
+                for a in pulse.findAll("a", href=True):
+                    href = a['href']
+                    title = a.get('title', '').strip() or a.text.strip()
+                    if not href or 'sh.st' in href:
+                        continue
+                    # Resolve /dls/ links
+                    link_href = href
+                    if '/dls/' in link_href:
+                        t_site_fb = re.sub('link', '', title.lower()).strip()
+                        logger.info('[DDL-DLS-RESOLVE] Detected /dls/ link for %s, attempting resolve' % t_site_fb)
+                        resolved = self._resolve_dls_link(link_href, t_site_fb)
+                        if resolved:
+                            link_href = resolved
+                        else:
+                            logger.fdebug('[DDL-DLS-RESOLVE] Skipping unresolvable dls link for %s' % t_site_fb)
+                            continue
+                    t_site = re.sub('link', '', title.lower()).strip()
+                    fallback_links.append({
+                        "series": fb_series,
+                        "site": t_site,
+                        "year": fb_year,
+                        "issues": None,
+                        "size": fb_size,
+                        "links": link_href,
+                        "pack": pack
+                    })
+            if fallback_links:
+                logger.info('[DDL-FALLBACK] Found %d links via direct aio-pulse extraction' % len(fallback_links))
+                valid_links['normal'] = {'series': fb_series, 'links': fallback_links}
+            else:
+                logger.fdebug('[DDL-FALLBACK] No links found via direct extraction either')
+
         tmp_links = []
         tmp_sites = []
         site_position = {}
