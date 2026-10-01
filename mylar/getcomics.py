@@ -699,6 +699,7 @@ class GC(object):
                             # real file-host URL (follows the 302 and de-obfuscates
                             # the Location header).
                             if '/dls/' in link_href:
+                                logger.info('[DDL-DLS-RESOLVE] Detected /dls/ link for %s, attempting resolve' % t_site)
                                 resolved = self._resolve_dls_link(link_href, t_site)
                                 if resolved:
                                     link_href = resolved
