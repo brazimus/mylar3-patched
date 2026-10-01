@@ -72,7 +72,7 @@ class GC(object):
                     else:
                         logger.fdebug('[GC_Cookie_Saver] Successfully saved cookie to file.')
                         for c in gc_cookie:
-                           self.session.cookies.set(name=c['name'], value=c['value'])
+                           self.session.cookies.set(name=c['name'], value=c['value'], domain=c.get('domain'))
                         test_success = True
             else:
                 # if flaresolverr isn't used and the cookies file doesn't already exist
@@ -107,7 +107,7 @@ class GC(object):
                 with open(self.session_path, 'r') as f:
                     gc_load = json.load(f)
                     for c in gc_load:
-                       self.session.cookies.set(name=c['name'], value=c['value'])
+                       self.session.cookies.set(name=c['name'], value=c['value'], domain=c.get('domain'))
             except Exception as e:
                 #logger.warn('[GC_Cookie_Loader] Unable to load cookie from file - will recreate. Error: %s' % e)
                 if os.path.isfile(self.session_path):
@@ -588,27 +588,7 @@ class GC(object):
 
         beeswax = soup.findAll("p", {"style": "text-align: center;"})
         logger.info('[DDL-GATHERER-OF-LINKAGE] Now compiling release information & available links...')
-        logger.info(f"[DDL-DEBUG] beeswax count: {len(beeswax)}")
-        # Debug: what does the soup actually contain?
-        all_p = soup.findAll("p")
-        logger.info(f"[DDL-DEBUG] total <p> tags: {len(all_p)}")
-        styles = set()
-        for p in all_p[:50]:
-            s = p.get('style', '')
-            if s:
-                styles.add(s[:60])
-        logger.info(f"[DDL-DEBUG] unique p styles (first 50): {list(styles)[:10]}")
-        # Check for aio-pulse divs directly
-        pulses = soup.findAll("div", {"class": "aio-pulse"})
-        logger.info(f"[DDL-DEBUG] aio-pulse divs: {len(pulses)}")
-        # What IS in this soup?
-        title_tag = soup.find("title")
-        logger.info(f"[DDL-DEBUG] page title: {title_tag.text[:100] if title_tag else 'NO TITLE'}")
-        body_text = soup.get_text()[:300] if soup else "NO SOUP"
-        logger.info(f"[DDL-DEBUG] body preview: {body_text[:200]}")
-        # Check html length
-        html_len = len(str(soup)) if soup else 0
-        logger.info(f"[DDL-DEBUG] soup HTML length: {html_len}")
+
         while True:
             #logger.fdebug('count_bees: %s' % count_bees)
             try:
@@ -716,7 +696,6 @@ class GC(object):
                     if not ltf:
                         if 'sh.st' not in lk['href']:
                             link_href = lk['href']
-                            logger.info(f"[DDL-DEBUG] Processing link: title='{lk.get('title', '?')}' href='{link_href[:100]}'")
                             # Resolve GetComics /dls/ interstitial links to the
                             # real file-host URL (follows the 302 and de-obfuscates
                             # the Location header).
