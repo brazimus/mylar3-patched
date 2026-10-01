@@ -588,6 +588,7 @@ class GC(object):
 
         beeswax = soup.findAll("p", {"style": "text-align: center;"})
         logger.info('[DDL-GATHERER-OF-LINKAGE] Now compiling release information & available links...')
+        logger.info(f"[DDL-DEBUG] beeswax count: {len(beeswax)}")
         while True:
             #logger.fdebug('count_bees: %s' % count_bees)
             try:
